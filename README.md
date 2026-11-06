@@ -21,10 +21,10 @@
 
 ## Навигация
 
-- [Возможности](#возможности)
-- [Архитектура](#архитектура)
-- [Технологии](#технологии)
-- [Установка и запуск](#локальный-запуск)
+- [Key Features](#key-features)
+- [Database Structure](#database-structure)
+- [SQL Analytics](#sql-analytics)
+- [Quick Start](#quick-start-with-docker-compose)
 
 
 ## Dashboard Preview

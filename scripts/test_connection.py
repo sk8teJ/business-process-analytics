@@ -32,13 +32,13 @@ def test_connection():
                 )
                 customers, products, orders, events = cur.fetchone()
 
-        print("\\nSUCCESS: PostgreSQL connection established.")
+        print("\nSUCCESS: PostgreSQL connection established.")
         print(f"Customers: {customers}")
         print(f"Products: {products}")
         print(f"Orders: {orders}")
         print(f"Process events: {events}")
     except psycopg.Error as error:
-        print("\\nERROR: Database connection failed.")
+        print("\nERROR: Database connection failed.")
         print(error)
         raise SystemExit(1) from error
 

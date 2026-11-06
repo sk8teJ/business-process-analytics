@@ -66,3 +66,16 @@ jobs:
           psql -h localhost -U postgres -d business_analytics -v ON_ERROR_STOP=1 -f database/queries/01_business_metrics.sql
           psql -h localhost -U postgres -d business_analytics -v ON_ERROR_STOP=1 -f database/queries/02_delivery_analysis.sql
           psql -h localhost -U postgres -d business_analytics -v ON_ERROR_STOP=1 -f database/queries/03_process_analysis.sql
+
+      - name: Smoke test Streamlit dashboard
+        run: |
+          python - <<'PY'
+          from streamlit.testing.v1 import AppTest
+
+          app = AppTest.from_file("app/main.py", default_timeout=30).run()
+          if app.exception:
+              for error in app.exception:
+                  print(error.message)
+              raise SystemExit("Dashboard smoke test failed")
+          print("Dashboard rendered without Streamlit exceptions")
+          PY

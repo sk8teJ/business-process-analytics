@@ -50,7 +50,7 @@ jobs:
         run: python -m compileall -q app scripts tests
 
       - name: Run unit tests
-        run: pytest -q
+        run: python -m pytest -q
 
       - name: Create database schema
         run: psql -h localhost -U postgres -d business_analytics -v ON_ERROR_STOP=1 -f database/schema.sql

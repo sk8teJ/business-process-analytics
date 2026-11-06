@@ -1,7 +1,7 @@
 # Business Process Analytics
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/sk8teJ/business-process-analytics/design/visual-readme-refresh/assets/readme-banner.svg" alt="Business Process Analytics banner" width="100%">
+  <img src="https://raw.githubusercontent.com/sk8teJ/business-process-analytics/main/assets/readme-banner.svg" alt="Business Process Analytics banner" width="100%">
 </div>
 <p>
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white">

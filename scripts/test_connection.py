@@ -14,7 +14,7 @@ DB_CONFIG = {
 }
 
 
-def test_connection():
+def check_connection():
     if not DB_CONFIG["password"]:
         raise SystemExit("DB_PASSWORD is not set. Add it to your .env file.")
 
@@ -44,4 +44,4 @@ def test_connection():
 
 
 if __name__ == "__main__":
-    test_connection()
+    check_connection()

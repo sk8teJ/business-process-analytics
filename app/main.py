@@ -8,12 +8,14 @@ import psycopg
 import streamlit as st
 from dotenv import load_dotenv
 
+from app.metrics import calculate_automation_roi, calculate_return_rate
+
 
 # =========================================================
 # CONFIGURATION
 # =========================================================
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
@@ -201,6 +203,17 @@ try:
                 ) AS return_count,
 
                 (
+                    SELECT COUNT(DISTINCT oi.order_id)
+                    FROM returns r
+                    JOIN order_items oi
+                        ON r.order_item_id = oi.order_item_id
+                    JOIN orders ro
+                        ON oi.order_id = ro.order_id
+                    WHERE ro.order_date >= %s
+                      AND ro.order_date < %s
+                ) AS returned_orders_count,
+
+                (
                     SELECT COALESCE(SUM(r.refund_amount), 0)
                     FROM returns r
                     JOIN order_items oi
@@ -224,6 +237,7 @@ try:
                 *date_params,
                 *date_params,
                 *date_params,
+                *date_params,
             ),
         )
 
@@ -238,7 +252,6 @@ try:
                 SUM(p.amount) AS revenue
 
             FROM payments p
-
             JOIN orders o
                 ON p.order_id = o.order_id
 
@@ -397,6 +410,7 @@ completed_refunds = float(metrics["completed_refunds"])
 net_revenue = gross_revenue - completed_refunds
 
 return_count = int(metrics["return_count"])
+returned_orders_count = int(metrics["returned_orders_count"])
 
 cancellation_rate = (
     cancelled_orders / total_orders * 100
@@ -404,11 +418,7 @@ cancellation_rate = (
     else 0
 )
 
-return_rate = (
-    return_count / total_orders * 100
-    if total_orders
-    else 0
-)
+return_rate = calculate_return_rate(returned_orders_count, total_orders)
 
 
 # =========================================================
@@ -464,7 +474,7 @@ col7.metric(
 )
 
 col8.metric(
-    "Returns",
+    "Return requests",
     f"{return_count:,}".replace(",", " "),
 )
 
@@ -477,7 +487,6 @@ st.divider()
 st.header("Sales analytics")
 
 chart_col1, chart_col2 = st.columns(2)
-
 with chart_col1:
     st.subheader("Monthly revenue")
 
@@ -643,7 +652,7 @@ st.subheader("Operational findings")
 insight_col1, insight_col2 = st.columns(2)
 
 with insight_col1:
-    st.markdown("#### Process bottlenecks")
+    st.markdown("#### Longest process stage")
 
     if not process_data.empty:
         valid_processes = process_data.dropna(
@@ -656,10 +665,15 @@ with insight_col1:
             ]
 
             st.warning(
-                f"Самый продолжительный этап — "
+                f"Наибольшая средняя продолжительность у этапа "
                 f"**{slowest['department_name']}**. "
                 f"Средняя продолжительность: "
                 f"**{slowest['average_duration_minutes']:.1f} мин.**"
+            )
+
+            st.caption(
+                "Большая длительность сама по себе не доказывает наличие узкого места. "
+                "Для такого вывода также нужны данные о загрузке и пропускной способности."
             )
 
             unfinished = int(
@@ -717,8 +731,7 @@ with insight_col2:
             st.success(
                 f"Наименьшая доля задержек у перевозчика "
                 f"**{best_carrier['carrier']}**: "
-                f"**{best_carrier['delay_rate_percent']:.2f}%**."
-            )
+                f"**{best_carrier['delay_rate_percent']:.2f}%**."            )
 
             st.caption(
                 "Сравнение отражает только синтетический набор данных "
@@ -807,18 +820,18 @@ if not process_data.empty:
             process_data["department_name"] == selected_department
         ].iloc[0]
 
-        process_events_count = int(
-            selected_process["total_events"]
+        completed_events_count = int(
+            selected_process["completed_events"]
         )
 
-        average_duration = float(
-            selected_process["average_duration_minutes"]
-            or 0
+        duration_value = selected_process["average_duration_minutes"]
+        average_duration = (
+            float(duration_value) if pd.notna(duration_value) else 0.0
         )
 
         st.write(
-            f"Количество событий за выбранный период: "
-            f"**{process_events_count:,}**".replace(",", " ")
+            f"Количество завершённых событий за выбранный период: "
+            f"**{completed_events_count:,}**".replace(",", " ")
         )
 
         st.write(
@@ -868,49 +881,25 @@ if not process_data.empty:
             step=10000,
         )
 
-        # Estimated hours saved in the selected period
-        estimated_hours_saved = (
-            process_events_count
-            * average_duration
-            / 60
-            * automation_share / 100
-            * time_reduction / 100
-        )
-
-        estimated_savings = (
-            estimated_hours_saved * hourly_cost
-        )
-
-        # Annualized estimate based on the selected date range
         selected_days = max(
             (end_date - start_date).days + 1,
             1,
         )
 
-        annual_hours_saved = (
-            estimated_hours_saved * 365 / selected_days
+        roi_result = calculate_automation_roi(
+            completed_events=completed_events_count,
+            average_duration_minutes=average_duration,
+            automation_share_percent=automation_share,
+            time_reduction_percent=time_reduction,
+            hourly_cost=hourly_cost,
+            selected_days=selected_days,
+            implementation_cost=implementation_cost,
         )
 
-        annual_savings = (
-            estimated_savings * 365 / selected_days
-        )
-
-        if implementation_cost > 0:
-            roi = (
-                (annual_savings - implementation_cost)
-                / implementation_cost
-                * 100
-            )
-
-            if annual_savings > 0:
-                payback_months = (
-                    implementation_cost / annual_savings * 12
-                )
-            else:
-                payback_months = None
-        else:
-            roi = None
-            payback_months = None
+        annual_hours_saved = roi_result["annual_hours_saved"]
+        annual_savings = roi_result["annual_savings"]
+        roi = roi_result["roi_percent"]
+        payback_months = roi_result["payback_months"]
 
         st.divider()
 
@@ -945,7 +934,7 @@ if not process_data.empty:
         else:
             st.info(
                 "Срок окупаемости не рассчитывается: "
-                "экономия не превышает нуля."
+                "нет положительной экономии или стоимость внедрения равна нулю."
             )
 
         st.info(

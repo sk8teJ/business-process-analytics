@@ -1,16 +1,20 @@
+import argparse
+import os
 import random
 from datetime import datetime, timedelta, timezone
-from getpass import getpass
 
 import psycopg
+from dotenv import load_dotenv
 
+load_dotenv(override=False)
 random.seed(42)
 
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "dbname": "business_analytics",
-    "user": "postgres",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "dbname": os.getenv("DB_NAME", "business_analytics"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", ""),
 }
 
 START_DATE = datetime(2025, 1, 1, tzinfo=timezone.utc)
@@ -85,10 +89,18 @@ def random_name():
     return f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
 
 
-def generate_data():
-    password = getpass("Enter PostgreSQL password: ")
+def generate_data(confirm=False):
+    if not confirm:
+        print("\nWARNING: this script truncates all demo tables and replaces their contents.")
+        answer = input("Type REGENERATE to continue: ").strip()
+        if answer != "REGENERATE":
+            print("Cancelled. No data was changed.")
+            return
 
-    with psycopg.connect(**DB_CONFIG, password=password) as conn:
+    if not DB_CONFIG["password"]:
+        raise SystemExit("DB_PASSWORD is not set. Add it to your .env file.")
+
+    with psycopg.connect(**DB_CONFIG) as conn:
         with conn.cursor() as cur:
             print("Clearing old test data...")
 
@@ -411,4 +423,13 @@ def generate_data():
 
 
 if __name__ == "__main__":
-    generate_data()
+    parser = argparse.ArgumentParser(
+        description="Regenerate the synthetic online-store dataset."
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="skip the confirmation prompt (the database tables will still be truncated)",
+    )
+    args = parser.parse_args()
+    generate_data(confirm=args.yes)

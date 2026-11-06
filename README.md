@@ -99,24 +99,111 @@
 
 Используются JOIN, GROUP BY, агрегатные функции, фильтрация и подзапросы.
 
+## Quick start with Docker Compose
+
+Для запуска полного демонстрационного стенда нужны Docker Desktop и Docker Compose. PostgreSQL и Streamlit запускаются отдельными контейнерами.
+
+1. Склонируйте репозиторий и перейдите в его папку:
+
+```bash
+git clone https://github.com/sk8teJ/business-process-analytics.git
+cd business-process-analytics
+```
+
+2. Создайте локальный файл настроек:
+
+```bash
+cp .env.example .env
+```
+
+В Windows PowerShell используйте `Copy-Item .env.example .env`. Откройте `.env` и задайте собственный пароль в `DB_PASSWORD`. Не публикуйте этот файл.
+
+3. Соберите и запустите приложение:
+
+```bash
+docker compose up --build -d
+```
+
+При первом запуске Docker создаст PostgreSQL и выполнит `database/schema.sql` для новой базы данных. После прохождения healthcheck запустится Streamlit.
+
+4. Создайте синтетические данные:
+
+```bash
+docker compose exec app python scripts/generate_data.py
+```
+
+Генератор попросит ввести слово `REGENERATE`, потому что перед заполнением он полностью очищает демонстрационные таблицы. Для повторяемого запуска без интерактивного подтверждения можно явно передать `--yes`:
+
+```bash
+docker compose exec app python scripts/generate_data.py --yes
+```
+
+**Важно:** используйте генератор только для демонстрационной базы. Он выполняет `TRUNCATE ... RESTART IDENTITY CASCADE` и удаляет существующие записи в таблицах проекта.
+
+5. Откройте дашборд: [http://localhost:8501](http://localhost:8501).
+
+Проверить соединение с базой можно командой:
+
+```bash
+docker compose exec app python scripts/test_connection.py
+```
+
+Остановить контейнеры, сохранив данные:
+
+```bash
+docker compose down
+```
+
+Удалить контейнеры вместе с томом PostgreSQL и всеми данными:
+
+```bash
+docker compose down -v
+```
+
+### Локальный запуск без Docker
+
+Создайте PostgreSQL базу `business_analytics`, настройте `.env` по примеру `.env.example`, установите зависимости и выполните схему:
+
+```bash
+python -m venv .venv
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+# macOS / Linux: source .venv/bin/activate
+pip install -r requirements.txt
+psql -U postgres -d business_analytics -f database/schema.sql
+python scripts/generate_data.py
+streamlit run app/main.py
+```
+
+### Конфигурация
+
+Приложение и скрипты используют переменные окружения `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` и `DB_PASSWORD`. Для локального запуска они загружаются из `.env`; переменные, уже заданные окружением, имеют приоритет. В Docker Compose для Streamlit автоматически устанавливается `DB_HOST=db`.
+
 ## Project Structure
 
 ```text
 business-process-analytics/
 ├── app/
-│   └── main.py
+│   ├── __init__.py
+│   ├── main.py
+│   └── metrics.py
 ├── database/
 │   ├── schema.sql
-│   ├── seed.sql
 │   └── queries/
 │       ├── 01_business_metrics.sql
 │       ├── 02_delivery_analysis.sql
 │       └── 03_process_analysis.sql
 ├── scripts/
 │   ├── generate_data.py
-│   ├── load_data.py
 │   └── test_connection.py
-├── screenshots/
+├── tests/
+│   └── test_metrics.py
+├── .github/workflows/ci.yml
+├── Dockerfile
+├── compose.yaml
+├── .env.example
+├── requirements.txt
+├── requirements-dev.txt
+└── screenshots/
 │   ├── 1.jpg
 │   ├── 2.jpg
 │   ├── 3.jpg
@@ -154,15 +241,29 @@ business-process-analytics/
 
 Результаты относятся к конкретной генерации синтетических данных и могут изменяться при повторном запуске генератора.
 
-## Limitations
+## Calculation assumptions and limitations
 
 - Данные созданы искусственно для демонстрации аналитических задач.
 - Автоматические выводы формируются по заданным правилам, без внешних AI-моделей.
-- ROI рассчитывается на основе пользовательских сценарных параметров.
-- Оценка не учитывает все возможные расходы, риски и затраты на сопровождение автоматизации.
+- Доля заказов с возвратом считается по уникальным заказам, в которых есть хотя бы одна заявка на возврат. Отдельно отображается количество самих заявок.
+- Средняя длительность этапа сама по себе не доказывает наличие узкого места: для полноценного анализа также нужны данные о загрузке, очередях и пропускной способности.
+- ROI-калькулятор использует только завершённые события, выбранную долю автоматизации, предполагаемое сокращение времени и стоимость рабочего часа. Значения за выбранный период пересчитываются на 365 дней.
+- ROI — сценарная оценка на основе пользовательских предположений, а не подтверждённый финансовый результат. Расчёт не учитывает лицензии, поддержку, обучение, риски внедрения и другие возможные расходы.
+- Генератор данных очищает таблицы проекта перед повторным заполнением. Используйте его только с демонстрационной базой данных.
+
+## Tests and continuous integration
+
+Локальные unit-тесты расчётов:
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+GitHub Actions автоматически проверяет Python-синтаксис, запускает unit-тесты, поднимает PostgreSQL 17, создаёт схему, генерирует синтетические данные и выполняет все три SQL-запроса. Это проверяет воспроизводимость учебного стенда, но не является нагрузочным тестированием.
 
 ## Project Status
 
-Реализованы структура базы данных, генерация демонстрационных данных, SQL-аналитика, подключение Python к PostgreSQL и интерактивный Streamlit-дашборд.
+В репозитории находятся схема PostgreSQL, генератор синтетических данных, SQL-аналитика, Streamlit-дашборд, Docker Compose-конфигурация и тесты расчётных функций.
 
 Проект создан в образовательных целях как портфолио-кейс по бизнес-аналитике и анализу операционных процессов.

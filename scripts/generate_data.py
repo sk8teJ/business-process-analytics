@@ -91,7 +91,7 @@ def random_name():
 
 def generate_data(confirm=False):
     if not confirm:
-        print("\\nWARNING: this script truncates all demo tables and replaces their contents.")
+        print("\nWARNING: this script truncates all demo tables and replaces their contents.")
         answer = input("Type REGENERATE to continue: ").strip()
         if answer != "REGENERATE":
             print("Cancelled. No data was changed.")

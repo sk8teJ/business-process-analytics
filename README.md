@@ -1,10 +1,31 @@
 # Business Process Analytics
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/sk8teJ/business-process-analytics/design/visual-readme-refresh/assets/readme-banner.svg" alt="Business Process Analytics banner" width="100%">
+</div>
+<p>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white">
+  <img alt="Pandas" src="https://img.shields.io/badge/Pandas-150458?style=flat-square&logo=pandas&logoColor=white">
+  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white">
+  <img alt="Plotly" src="https://img.shields.io/badge/Plotly-3F4F75?style=flat-square&logo=plotly&logoColor=white">
+  <img alt="Educational project" src="https://img.shields.io/badge/Project-Educational-64748B?style=flat-square">
+</p>
+
 Учебный проект по анализу бизнес-процессов интернет-магазина. Система объединяет PostgreSQL, SQL-аналитику и интерактивный дашборд на Python и Streamlit.
 
 Проект демонстрирует работу с данными, анализ операционных показателей, поиск потенциальных узких мест и оценку возможного эффекта автоматизации.
 
 **Все данные синтетические. Проект не использует реальные коммерческие данные.**
+
+
+## Навигация
+
+- [Возможности](#возможности)
+- [Архитектура](#архитектура)
+- [Технологии](#технологии)
+- [Установка и запуск](#локальный-запуск)
+
 
 ## Dashboard Preview
 

@@ -5,6 +5,8 @@ def calculate_return_rate(returned_orders: int, total_orders: int) -> float:
     """Return the percentage of orders with at least one return request."""
     if returned_orders < 0 or total_orders < 0:
         raise ValueError("Order counts cannot be negative.")
+    if returned_orders > total_orders:
+        raise ValueError("Returned orders cannot exceed total orders.")
     if total_orders == 0:
         return 0.0
     return returned_orders / total_orders * 100

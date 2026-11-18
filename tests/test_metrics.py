@@ -63,3 +63,8 @@ def test_automation_roi_requires_positive_period():
             selected_days=0,
             implementation_cost=10000,
         )
+
+
+def test_return_rate_rejects_more_returned_orders_than_total_orders():
+    with pytest.raises(ValueError, match="cannot exceed"):
+        calculate_return_rate(11, 10)
